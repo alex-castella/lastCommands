@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <termios.h>
 
 #define SIZE 512
 
@@ -19,6 +20,12 @@ int main() {
   int wstatus;
   int fd[2];
   int i = 0;
+
+
+  if (pipe(fd) == -1){
+    perror("Error craeting pipe.");
+    exit(EXIT_FAILURE);
+  }
 
   pid = fork();
   switch (pid) {
@@ -39,6 +46,7 @@ int main() {
       printf("\n");
       printf("Complete path: %s", envHomeCopy);
       printf("\n");
+
       //Open .bash_history and reading commands
       FILE *f = fopen(envHomeCopy, "r");
       if (f == NULL) {
