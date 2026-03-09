@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <termios.h>
+#include <ncurses.h>
 
 #define SIZE 512
 #define TARGET 20
@@ -15,29 +16,18 @@
 int main() {
   char c;
   char envHomeCopy[SIZE]; 
-  char commands[SIZE];
+  char actualCommand[SIZE];
+  char **commandList = malloc(TARGET*sizeof(SIZE));
   char *bashHistory = "/.bash_history";
   pid_t pid;
   int wstatus;
   int fd[2];
   int i = 0;
+  int j = 0;
   long int pos;
 
 
-  if (pipe(fd) == -1){
-    perror("Error craeting pipe.");
-    exit(EXIT_FAILURE);
-  }
 
-  pid = fork();
-  switch (pid) {
-    case -1:
-      perror("Error creating process.");
-      exit(EXIT_FAILURE);
-    case 0:
-      //puts("Child existing");
-      //Close fd[0]
-      close(fd[0]);
       //Get .bash_history path
       const char *envHome = getenv("HOME");
       //printf("%s", envHome);
@@ -62,32 +52,31 @@ int main() {
       pos = ftell(f);
       //printf("%ld", pos);
       pos--;
-      while(i < 20){
+      while(i < TARGET){
         if(!fseek(f, --pos, SEEK_SET)){
-          if(fgetc(f) == '\n' && (fgets(commands, sizeof(commands),f) != NULL)){
-            if(commands[0] != '#'){
-              printf("Command n %d: %s\n", i + 1, commands);
+          if(fgetc(f) == '\n' && (fgets(actualCommand, sizeof(actualCommand),f) != NULL)){
+            if(actualCommand[0] != '#'){
+              printf("Command n %d: %s\n", i + 1, actualCommand);
+              //Reuse envHomeCopy as bufer for snprintf
+              if((snprintf(commandList[i], SIZE, "%s", actualCommand) >= SIZE)){
+                perror("Error copying commandList.");
+                _exit(EXIT_FAILURE);
+              }
               i++;
             }
           }
         }
       }
+      //initscr();              /*Start curses mode */ 
+      //printw("NCURSES\n");    /*Print */
+      //refresh();              /*Print it on to the real screen */
+      //getch();                /*Wait for user input */
+      //endwin();               /*End curses mode */
+
       
-      
-      /*while (fgets(commands, sizeof(commands), f) != NULL && i < 10) {
-        if (commands[0] != '#') {
-          printf("Command n%d: %s \n", i, commands);
-          i++;
-        }
-      }*/
 
       fclose(f);
       fflush(stdout);
-      _exit(EXIT_SUCCESS);
-    default:
-      //Close file decriptor writing side fd[1]
-      close(fd[1]);
-      wait(&wstatus);
       exit(EXIT_SUCCESS);
-  }
+  
 }
