@@ -10,9 +10,11 @@
 #include <unistd.h>
 
 #define SIZE 512
-#define TARGET 20
+#define TARGET 10
 
 int main() {
+  struct termios newt, oldt;
+  char commandList[TARGET][SIZE];
   char c;
   char envHomeCopy[SIZE];
   char commands[SIZE];
@@ -22,6 +24,45 @@ int main() {
   int fd[2];
   int i = 0;
   long int pos;
+
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+
+  // Get .bash_history path
+  const char *envHome = getenv("HOME");
+  // printf("%s", envHome);
+  if (envHome == NULL) {
+    exit(EXIT_FAILURE);
+  }
+  strcpy(envHomeCopy, envHome);
+  // strcat(envHomeCopy, bashHistory);
+  snprintf(envHomeCopy, sizeof(envHomeCopy), "%s%s", envHome, "/.bash_history");
+  // printf("\n");
+  // printf("Complete path: %s", envHomeCopy);
+  // printf("\n");
+
+  // Open .bash_history and reading commands
+  FILE *f = fopen(envHomeCopy, "r");
+  if (f == NULL) {
+    perror("Error opening file.");
+    _exit(EXIT_FAILURE);
+  }
+  // Point to the end of the file(from las command)
+  fseek(f, 0L, SEEK_END);
+  pos = ftell(f);
+  // printf("%ld", pos);
+  pos--;
+  while (i < TARGET) {
+    if (!fseek(f, --pos, SEEK_SET)) {
+      if (fgetc(f) == '\n' && (fgets(commands, sizeof(commands), f) != NULL)) {
+        if (commands[0] != '#') {
+          printf("Command n %d: %s\n", i + 1, commands);
+          i++;
+        }
+      }
+    }
+  }
 
   if (pipe(fd) == -1) {
     perror("Error craeting pipe.");
@@ -37,49 +78,6 @@ int main() {
     // puts("Child existing");
     // Close fd[0]
     close(fd[0]);
-    // Get .bash_history path
-    const char *envHome = getenv("HOME");
-    // printf("%s", envHome);
-    if (envHome == NULL) {
-      exit(EXIT_FAILURE);
-    }
-    strcpy(envHomeCopy, envHome);
-    // strcat(envHomeCopy, bashHistory);
-    snprintf(envHomeCopy, sizeof(envHomeCopy), "%s%s", envHome,
-             "/.bash_history");
-    // printf("\n");
-    // printf("Complete path: %s", envHomeCopy);
-    // printf("\n");
-
-    // Open .bash_history and reading commands
-    FILE *f = fopen(envHomeCopy, "r");
-    if (f == NULL) {
-      perror("Error opening file.");
-      _exit(EXIT_FAILURE);
-    }
-    // Point to the end of the file(from las command)
-    fseek(f, 0L, SEEK_END);
-    pos = ftell(f);
-    // printf("%ld", pos);
-    pos--;
-    while (i < TARGET) {
-      if (!fseek(f, --pos, SEEK_SET)) {
-        if (fgetc(f) == '\n' &&
-            (fgets(commands, sizeof(commands), f) != NULL)) {
-          if (commands[0] != '#') {
-            printf("Command n %d: %s\n", i + 1, commands);
-            i++;
-          }
-        }
-      }
-    }
-
-    /*while (fgets(commands, sizeof(commands), f) != NULL && i < TARGET) {
-      if (commands[0] != '#') {
-        printf("Command n%d: %s \n", i, commands);
-        i++;
-      }
-    }*/
 
     fclose(f);
     fflush(stdout);
