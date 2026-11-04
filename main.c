@@ -1,4 +1,3 @@
-#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,18 +18,13 @@ int main() {
   char envHomeCopy[SIZE];
   char commands[SIZE];
   char *bashHistory = "/.bash_history";
-  pid_t pid;
-  int wstatus;
-  int fd[2];
   int i = 0;
+  int j = TARGET;
+  int selectedIndex = 0;
   long int pos;
 
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-
-  // Get .bash_history path
-  const char *envHome = getenv("HOME");
+  // Get .bash_history path const
+  char *envHome = getenv("HOME");
   // printf("%s", envHome);
   if (envHome == NULL) {
     exit(EXIT_FAILURE);
@@ -52,40 +46,42 @@ int main() {
   fseek(f, 0L, SEEK_END);
   pos = ftell(f);
   // printf("%ld", pos);
+  // Substract one position because the last char i EOF
   pos--;
   while (i < TARGET) {
     if (!fseek(f, --pos, SEEK_SET)) {
       if (fgetc(f) == '\n' && (fgets(commands, sizeof(commands), f) != NULL)) {
         if (commands[0] != '#') {
-          printf("Command n %d: %s\n", i + 1, commands);
+          strcpy(commandList[i], commands);
+
+          // printf("Command n %d: %s\n", i + 1, commands);
           i++;
         }
       }
     }
   }
+  fclose(f);
+  fflush(stdout);
 
-  if (pipe(fd) == -1) {
-    perror("Error craeting pipe.");
-    exit(EXIT_FAILURE);
+  for (int j = i - 1; j >= 0; j--) {
+    if (selectedIndex == j) {
+      printf("\x1b[7m Command n %d: %s\x1b[0m\n", (i - j), commandList[j]);
+    } else {
+      printf("Command n %d: %s\n", (i - j), commandList[j]);
+    }
   }
+  fflush(stdout);
+  printf("HERE\n");
 
-  pid = fork();
-  switch (pid) {
-  case -1:
-    perror("Error creating process.");
-    exit(EXIT_FAILURE);
-  case 0:
-    // puts("Child existing");
-    // Close fd[0]
-    close(fd[0]);
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    fclose(f);
-    fflush(stdout);
-    _exit(EXIT_SUCCESS);
-  default:
-    // Close file decriptor writing side fd[1]
-    close(fd[1]);
-    wait(&wstatus);
-    exit(EXIT_SUCCESS);
+  while (c != '\n' && c != '\r') {
+
+    c = getchar();
   }
+  printf("EXIT PROGRAM\n");
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
