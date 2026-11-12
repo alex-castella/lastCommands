@@ -11,6 +11,8 @@
 #define SIZE 512
 #define TARGET 10
 
+void printCommands(char commandList[TARGET][SIZE], int i, int selectedIndex);
+
 int main() {
   struct termios newt, oldt;
   char commandList[TARGET][SIZE];
@@ -19,7 +21,6 @@ int main() {
   char commands[SIZE];
   char *bashHistory = "/.bash_history";
   int i = 0;
-  int j = TARGET;
   int selectedIndex = 0;
   long int pos;
 
@@ -46,7 +47,7 @@ int main() {
   fseek(f, 0L, SEEK_END);
   pos = ftell(f);
   // printf("%ld", pos);
-  // Substract one position because the last char i EOF
+  // Substract one position because the last char is EOF
   pos--;
   while (i < TARGET) {
     if (!fseek(f, --pos, SEEK_SET)) {
@@ -62,7 +63,57 @@ int main() {
   }
   fclose(f);
   fflush(stdout);
+  /*
+    for (int j = i - 1; j >= 0; j--) {
+      if (selectedIndex == j) {
+        printf("\x1b[7m Command n %d: %s\x1b[0m\n", (i - j), commandList[j]);
+      } else {
+        printf("Command n %d: %s\n", (i - j), commandList[j]);
+      }
+    }
+    fflush(stdout);
+    printf("HERE\n");
+  */
 
+  // printCommands(commandList, i, selectedIndex);
+
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+  while (c != '\n' && c != '\r') {
+
+    printCommands(commandList, i, selectedIndex);
+
+    c = getchar();
+    if (c == '\x1b') {
+      getchar(); // This getchar is needed to discard '['
+      switch (getchar()) {
+      case 'A':
+        if (selectedIndex < 9) {
+          selectedIndex++;
+        }
+        break;
+
+      case 'B':
+        if (selectedIndex > 0) {
+          selectedIndex--;
+        }
+        break;
+
+      default:
+        break;
+      }
+    }
+  }
+  printf("EXIT PROGRAM\n");
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  system(commandList[selectedIndex]);
+  _exit(EXIT_SUCCESS);
+}
+
+void printCommands(char commandList[TARGET][SIZE], int i, int selectedIndex) {
   for (int j = i - 1; j >= 0; j--) {
     if (selectedIndex == j) {
       printf("\x1b[7m Command n %d: %s\x1b[0m\n", (i - j), commandList[j]);
@@ -72,16 +123,4 @@ int main() {
   }
   fflush(stdout);
   printf("HERE\n");
-
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-  while (c != '\n' && c != '\r') {
-
-    c = getchar();
-  }
-  printf("EXIT PROGRAM\n");
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
