@@ -26,16 +26,11 @@ int main() {
 
   // Get .bash_history path const
   char *envHome = getenv("HOME");
-  // printf("%s", envHome);
   if (envHome == NULL) {
     exit(EXIT_FAILURE);
   }
-  strcpy(envHomeCopy, envHome);
-  // strcat(envHomeCopy, bashHistory);
+
   snprintf(envHomeCopy, sizeof(envHomeCopy), "%s%s", envHome, "/.bash_history");
-  // printf("\n");
-  // printf("Complete path: %s", envHomeCopy);
-  // printf("\n");
 
   // Open .bash_history and reading commands
   FILE *f = fopen(envHomeCopy, "r");
@@ -46,7 +41,7 @@ int main() {
   // Point to the end of the file(from las command)
   fseek(f, 0L, SEEK_END);
   pos = ftell(f);
-  // printf("%ld", pos);
+
   // Substract one position because the last char is EOF
   pos--;
   while (i < TARGET) {
@@ -54,8 +49,6 @@ int main() {
       if (fgetc(f) == '\n' && (fgets(commands, sizeof(commands), f) != NULL)) {
         if (commands[0] != '#') {
           strcpy(commandList[i], commands);
-
-          // printf("Command n %d: %s\n", i + 1, commands);
           i++;
         }
       }
@@ -63,20 +56,8 @@ int main() {
   }
   fclose(f);
   fflush(stdout);
-  /*
-    for (int j = i - 1; j >= 0; j--) {
-      if (selectedIndex == j) {
-        printf("\x1b[7m Command n %d: %s\x1b[0m\n", (i - j), commandList[j]);
-      } else {
-        printf("Command n %d: %s\n", (i - j), commandList[j]);
-      }
-    }
-    fflush(stdout);
-    printf("HERE\n");
-  */
 
-  // printCommands(commandList, i, selectedIndex);
-
+  // Get attr of term and turn raw mode
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
   newt.c_lflag &= ~(ICANON | ECHO);
@@ -122,5 +103,4 @@ void printCommands(char commandList[TARGET][SIZE], int i, int selectedIndex) {
     }
   }
   fflush(stdout);
-  printf("HERE\n");
 }
