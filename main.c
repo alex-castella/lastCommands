@@ -95,6 +95,7 @@ int main() {
 }
 
 void printCommands(char commandList[TARGET][SIZE], int i, int selectedIndex) {
+  printf("\x1b[2J");
   for (int j = i - 1; j >= 0; j--) {
     if (selectedIndex == j) {
       printf("\x1b[7m Command n %d: %s\x1b[0m\n", (i - j), commandList[j]);
